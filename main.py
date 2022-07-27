@@ -12,8 +12,8 @@ env = gym.make('Breakout-v4')
 
 
 # Non-variable H-Params
-epochs = 5
-runs_per_hp_set = 2 # To compute statistics
+epochs = 500
+runs_per_hp_set = 5 # To compute statistics
 buffer_size = 1000
 epsilon_initial = 1
 epsilon_final = 0.1
@@ -23,15 +23,15 @@ epsilon_final = 0.1
 
 #Skips
 skip_min = 1
-skip_max = 3
+skip_max = 4
 # Learning rates
 lr_min = 1e-4
 lr_max = 1e-2
 # Batch_size
-bs_min = 30
-bs_max = 140
+bs_min = 10
+bs_max = 300
 # Greedy Policy STeps
-gps_min = 1e-3
+gps_min = 1e-5
 gps_max = 1e-2
 
 
@@ -101,7 +101,6 @@ for x in range (iterations):
         returns.append(ret)
         q_vals.append(q_val)
         ep_lens.append(ep_len)
-
 
     # Save data about the iteration
     recap(losses,returns,q_vals,ep_lens,name_of_run, runs_per_hp_set)

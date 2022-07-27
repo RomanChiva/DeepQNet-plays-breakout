@@ -139,6 +139,7 @@ class Trainer:
         batch_loss = self.evaluate_batch_loss() 
         batch_loss.backward()
         self.optimizer.step()
+        
         return batch_loss
     
     def epoch(self):
@@ -205,7 +206,7 @@ class Trainer:
         ep_len = []
 
         for x in range(self.epochs):
-            print('EPISODE:{}'.format(x))
+            print('EPOCH:{}'.format(x))
             batch_loss,epoch_return,average_q_val,average_episode_length = self.epoch()
             losses.append(batch_loss)
             returns.append(epoch_return)
