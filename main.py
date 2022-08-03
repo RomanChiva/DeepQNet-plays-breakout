@@ -14,8 +14,9 @@ env = gym.make('Breakout-v4')
 
 
 # Non-variable H-Params
-epochs = 500
-runs_per_hp_set = 5 # To compute statistics
+epochs = 30
+updates_per_epoch = 5e4
+runs_per_hp_set = 1 # To compute statistics
 buffer_size = 1000
 epsilon_initial = 1
 epsilon_final = 0.1
@@ -42,7 +43,7 @@ gps_max = 5e-5
 # ============================================
 
 # How many HParam iterations should we evaluate
-iterations = 30
+iterations = 1
 
 # Build uniform distributions
 skip  = np.random.uniform(low=skip_min, high=skip_max, size = iterations)
@@ -55,9 +56,9 @@ gps  = np.random.uniform(low=gps_min, high=gps_max, size = iterations)
 gps = np.round(gps, decimals=5)
 
 # Save Params
-params = np.array([skip,lr,bs,gps])
-with open('Hyperparameters/RS{n}_params.pkl'.format(n=iterations), 'wb') as f:
-    pickle.dump(params,f)
+#params = np.array([skip,lr,bs,gps])
+#with open('Hyperparameters/RS{n}_params.pkl'.format(n=iterations), 'wb') as f:
+ #   pickle.dump(params,f)
 
 
 # Use GPU for tensors
@@ -94,16 +95,18 @@ for x in range (iterations):
         trainer = Trainer(  device = dev,
                             env=env,
                             buffer = buffer,
-                            skip = int(skip[x]),
+                            skip = 2,#int(skip[x]),
                             epochs = epochs,
-                            lr = lr[x],
-                            batch_size = int(bs[x]),
+                            updates_per_epoch = updates_per_epoch,
+                            lr = 1e-4,#lr[x],
+                            batch_size = 32,#int(bs[x]),
                             eps_initial=epsilon_initial,
                             eps_final = epsilon_final,
-                            eps_step=gps[x]   )
+                            eps_step=1e-8)#gps[x]   )
 
+        name_of_run = 'Hparam_paper'
         trainer.populate()
-        model, loss, ret, q_val, ep_len = trainer.train()
+        model, loss, ret, q_val, ep_len = trainer.train(name_of_run)
         path = 'TrainedModels/' + name_of_run + '_{}'.format(x+1) +'.pt'
         torch.save(model, path)
 

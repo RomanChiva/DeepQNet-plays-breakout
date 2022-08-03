@@ -27,7 +27,7 @@ class Trainer:
             eps_step: steps
 
     """ 
-    def __init__(self,device,env,buffer,skip,epochs,lr,batch_size,eps_initial,eps_final,eps_step) -> None:
+    def __init__(self,device,env,buffer,skip,epochs,updates_per_epoch,lr,batch_size,eps_initial,eps_final,eps_step) -> None:
         
         # Load external hyperparams
         self.env = env
@@ -39,6 +39,7 @@ class Trainer:
         self.buffer = buffer
         self.skip = skip
         self.epochs = epochs
+        self.updates_per_epoch = updates_per_epoch
         self.eps_initial = eps_initial
         self.eps_final = eps_final
         self.eps_step = eps_step
@@ -146,18 +147,21 @@ class Trainer:
         
         return batch_loss
     
-    def epoch(self):
+    def epoch(self,epoch_number):
 
         # Run N= batch_size steps, and then perform gradient update
 
         # Relevant parameters
-        rewards = []
+        reward = 0
         episode_length = []
         q_vals = []
+        losses = []
 
         # Initialize
-        counter = 0
-        episode_counter = 0
+        gradient_update_counter = 0
+        gradient_updates = 0
+        episode_length_counter = 0
+        episodes = 0
         obs0 = self.step(0,init=True)
 
         while True:
@@ -171,25 +175,38 @@ class Trainer:
             # Swap observations
             obs0 = copy.copy(obs1)
             # Add to counter 
-            counter += 1
-            episode_counter +=1
+            gradient_update_counter += 1
+            episode_length_counter +=1
 
             # Append to lists
-            rewards.append(rew)
             q_vals.append(q_val.detach().cpu())
+
+            if rew != 0:
+                reward += rew
+            
+
+            if gradient_update_counter >= self.batch_size:
+                batch_loss = self.optimize_step().detach().cpu()
+                losses.append(batch_loss)
+                gradient_update_counter = 0
+                gradient_updates +=1
+                print('Epoch:{e_num}, Mini-Batch:{a}'.format(e_num=epoch_number,a=gradient_updates))
+                
+
 
             if done:
 
                 obs0 = self.step(0,init=True)
-                episode_length.append(episode_counter)
-                episode_counter = 0
+                episode_length.append(episode_length_counter)
+                episode_length_counter = 0
+                episodes +=1
 
-                # When the batch_size is reached, stop the loop after the episode ends
-                if counter >= self.batch_size:
+                # When the final num of gradient updates is reached, stop the loop after the episode ends
+                if gradient_updates >= self.updates_per_epoch:
                     break
 
-        batch_loss = self.optimize_step().detach()
-        epoch_return = np.sum(np.array(rewards)) 
+        epoch_loss = np.mean(np.array(losses))
+        epoch_return = reward/episodes 
         average_q_val = np.mean(np.array(q_vals))
         average_episode_length = np.mean(np.array(episode_length))
 
@@ -202,7 +219,7 @@ class Trainer:
             
 
 
-    def train(self):
+    def train(self, name_of_run):
 
         losses = []
         returns = []
@@ -211,11 +228,16 @@ class Trainer:
 
         for x in range(self.epochs):
             print('EPOCH:{}'.format(x))
-            batch_loss,epoch_return,average_q_val,average_episode_length = self.epoch()
+            batch_loss,epoch_return,average_q_val,average_episode_length = self.epoch(x)
             losses.append(batch_loss)
             returns.append(epoch_return)
             q_vals.append(average_q_val)
             ep_len.append(average_episode_length)
+
+
+            path = 'TrainedModels/' + name_of_run + '_{}'.format(x) +'.pt'
+            torch.save(self.model, path)
+
 
         return self.model, losses, returns, q_vals, ep_len
 
