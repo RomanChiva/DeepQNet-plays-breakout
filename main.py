@@ -7,6 +7,8 @@ from testing_tools import recap
 import numpy as np
 import pickle
 
+
+
 #Define Environment
 env = gym.make('Breakout-v4')
 
@@ -28,11 +30,11 @@ skip_max = 4
 lr_min = 1e-4
 lr_max = 1e-2
 # Batch_size
-bs_min = 10
+bs_min = 50
 bs_max = 300
 # Greedy Policy STeps
 gps_min = 1e-5
-gps_max = 1e-2
+gps_max = 5e-5
 
 
 # ============================================
@@ -56,6 +58,13 @@ gps = np.round(gps, decimals=5)
 params = np.array([skip,lr,bs,gps])
 with open('Hyperparameters/RS{n}_params.pkl'.format(n=iterations), 'wb') as f:
     pickle.dump(params,f)
+
+
+# Use GPU for tensors
+if torch.cuda.is_available():  
+  dev = "cuda:0" 
+else:  
+  dev = "cpu"  
 
 
 
@@ -82,7 +91,8 @@ for x in range (iterations):
         buffer = ReplayBuffer(buffer_size)
 
         # Trainer tool
-        trainer = Trainer(  env=env,
+        trainer = Trainer(  device = dev,
+                            env=env,
                             buffer = buffer,
                             skip = int(skip[x]),
                             epochs = epochs,

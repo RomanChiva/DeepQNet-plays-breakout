@@ -27,7 +27,7 @@ class Trainer:
             eps_step: steps
 
     """ 
-    def __init__(self,env,buffer,skip,epochs,lr,batch_size,eps_initial,eps_final,eps_step) -> None:
+    def __init__(self,device,env,buffer,skip,epochs,lr,batch_size,eps_initial,eps_final,eps_step) -> None:
         
         # Load external hyperparams
         self.env = env
@@ -42,6 +42,10 @@ class Trainer:
         self.eps_initial = eps_initial
         self.eps_final = eps_final
         self.eps_step = eps_step
+
+        self.device = device
+        # Process model using GPU
+        self.model.to(device)
 
         # Obs tensor template
         self.obs_template = torch.empty((1,self.skip,86,86))
@@ -60,7 +64,7 @@ class Trainer:
             for x in range(self.skip):
                 obs[0,x,:,:] = torch.from_numpy(feat_extract(obs_s))
             
-            return obs
+            return obs.to(self.device)
 
         # Steps that are not initial
 
@@ -73,7 +77,7 @@ class Trainer:
                 obs[0,x,:,:] = torch.from_numpy(feat_extract(obs_s))
                 rew.append(rew_s)
                 
-            return obs, sum(rew), done
+            return obs.to(self.device), sum(rew), done
 
 
 
@@ -172,7 +176,7 @@ class Trainer:
 
             # Append to lists
             rewards.append(rew)
-            q_vals.append(q_val.detach())
+            q_vals.append(q_val.detach().cpu())
 
             if done:
 

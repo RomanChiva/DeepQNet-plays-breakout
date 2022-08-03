@@ -146,11 +146,14 @@ def recap(losses, returns, q_vals, ep_len, tag, reps):
     for x in range(reps):
         axs[1,0].plot(range(len(q_vals[x])),q_vals[x])
     axs[1,0].set_title('Average Max-Q-Value')
+    axs[1,0].set_xlabel('Epochs')
 
     for x in range(reps):
         axs[1,1].plot(range(len(ep_len[x])),ep_len[x])
     axs[1,1].set_title('Average Episode Length')
+    axs[1,1].set_xlabel('Epochs')
     
+    plt.tight_layout()
     plt.savefig('recaps/plots/{a}.png'.format(a=tag))
 
     # Save the numerical data
@@ -159,7 +162,7 @@ def recap(losses, returns, q_vals, ep_len, tag, reps):
 
     filename = tag + '.pkl'
 
-    with open('recaps/numerical_data/filename', 'wb') as f:
+    with open('recaps/numerical_data/{a}'.format(a=filename), 'wb') as f:
         pickle.dump(array,f)
 
 
