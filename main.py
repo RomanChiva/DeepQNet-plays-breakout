@@ -17,10 +17,10 @@ env = gym.make('Breakout-v4')
 epochs = 50
 updates_per_epoch = 5e4
 runs_per_hp_set = 1 # To compute statistics
-buffer_size = 1e5
+buffer_size = 10000
 epsilon_initial = 1
 epsilon_final = 0.1
-
+ 
 
 # Define search space
 
