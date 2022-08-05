@@ -11,29 +11,20 @@ class DeepQNet(nn.Module):
     # Output: Values for actions [4]
 
 
-    def __init__(self,input_shape,output_shape) -> None:
+    def __init__(self,input_shape,hidden,output_shape) -> None:
         super().__init__()
 
         # Create the layers
-        self.conv1 = nn.Conv2d(in_channels=input_shape,out_channels=16,kernel_size=8,stride=4)
-        self.conv2 = nn.Conv2d(in_channels=16,out_channels=32,kernel_size=4,stride=2)
-        self.fc = nn.Linear(2592,256)
-        self.output = nn.Linear(256,output_shape)
+        self.fc1 = nn.Linear(input_shape, hidden)
+        self.fc2 = nn.Linear(hidden,hidden)
+        self.output = nn.Linear(hidden,output_shape)
         
 
     def forward(self, x):
 
-        # Convolutions and relus
-        x = self.conv1(x)
+        x = self.fc1(x)
         x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        
-        # Flatten
-        x = torch.flatten(x)
-
-        #Linear layers and output
-        x = self.fc(x)
+        x = self.fc2(x)
         x = F.relu(x)
         x = self.output(x)
 

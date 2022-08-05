@@ -33,7 +33,7 @@ class Trainer:
         self.env = env
         self.seed = int(np.random.random()*1e5)
         torch.manual_seed(self.seed)
-        self.model = DeepQNet(skip,self.env.action_space.n)
+        self.model = DeepQNet(4,10,self.env.action_space.n)
         self.lr = lr
         self.batch_size = batch_size
         self.buffer = buffer
@@ -49,11 +49,25 @@ class Trainer:
         self.model.to(device)
 
         # Obs tensor template
-        self.obs_template = torch.empty((1,self.skip,86,86))
+        self.obs_template = torch.empty(4)
         
         # Create optimizer
         self.optimizer = torch.optim.Adam(self.model.parameters(),lr=self.lr)
         self.loss_func = torch.nn.MSELoss()
+
+    def gaussian(self,x):
+
+        mu = 0
+        sig = 10
+
+        return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+
+    def custom_reward(self, obs, rew):
+
+        x_rew = self.gaussian(obs[0]-obs[2])/10
+        y_rew = (1-(1/72)*obs[1])/10
+
+        return rew + x_rew + y_rew
 
     def step(self,act, init= False):
 
