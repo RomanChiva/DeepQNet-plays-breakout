@@ -12,6 +12,8 @@ def feat_extract(obs):
     obs = color.rgb2gray(obs)
     # Rescale
     obs = transform.rescale(obs,0.6,anti_aliasing=True)
+    obs[obs[:,:] != 0] = 255
+    
     # Return, rescaled cropped grayscale observation
     return obs
 

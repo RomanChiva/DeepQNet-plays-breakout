@@ -14,10 +14,10 @@ env = gym.make('Breakout-v4')
 
 
 # Non-variable H-Params
-epochs = 30
+epochs = 50
 updates_per_epoch = 5e4
 runs_per_hp_set = 1 # To compute statistics
-buffer_size = 1000
+buffer_size = 1e5
 epsilon_initial = 1
 epsilon_final = 0.1
 
@@ -95,14 +95,14 @@ for x in range (iterations):
         trainer = Trainer(  device = dev,
                             env=env,
                             buffer = buffer,
-                            skip = 2,#int(skip[x]),
+                            skip = 4,#int(skip[x]),
                             epochs = epochs,
                             updates_per_epoch = updates_per_epoch,
                             lr = 1e-4,#lr[x],
                             batch_size = 32,#int(bs[x]),
                             eps_initial=epsilon_initial,
                             eps_final = epsilon_final,
-                            eps_step=1e-8)#gps[x]   )
+                            eps_step=0.9e-6)#gps[x]   )
 
         name_of_run = 'Hparam_paper'
         trainer.populate()

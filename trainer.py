@@ -157,11 +157,13 @@ class Trainer:
         q_vals = []
         losses = []
 
-        # Initialize
+        # Counters
         gradient_update_counter = 0
         gradient_updates = 0
         episode_length_counter = 0
         episodes = 0
+
+        # Initialize environment
         obs0 = self.step(0,init=True)
 
         while True:
