@@ -28,10 +28,10 @@ def feat_extract2(obs):
     obs_r[obs_r != 0] = 255
     # # Rescale
     obs_r = transform.rescale(obs_r,0.5,anti_aliasing=True)
-    print(np.shape(obs_r))
 
     # ==== FIND CENTROIDS
     non0 = np.transpose(np.nonzero(obs_r))
+
 
     dbscan = DBSCAN(eps=3,min_samples=1).fit(non0)
     labels = dbscan.labels_
@@ -48,8 +48,10 @@ def feat_extract2(obs):
     centroids = centroids[centroids[:,2].argsort()]
 
     if np.isnan(centroids[0,0]):
-        centroids[0,0] = centroids[1,0]
-        centroids[0,1] = centroids[1,1]
+        centroids[0,0] = 0
+        centroids[0,1] = 0
+
+    
 
     return torch.tensor([centroids[0,0],centroids[0,1],centroids[1,0],centroids[1,1]])
 
@@ -62,7 +64,7 @@ if __name__ =='__main__':
     obs2,a,b,_ = env.step(2) 
     obs3,a,b,_ = env.step(2)
     centroids = feat_extract2(obs)
-    print(centroids)
+    
     #plt.imshow(obs2, cmap='Greys')
     
     #plt.show()

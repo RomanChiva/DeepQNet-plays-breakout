@@ -1,6 +1,7 @@
 import unittest
 from trainer import Trainer
 import gym
+from gym.utils.play import play
 from DQN import DeepQNet
 from replay_buffer import ReplayBuffer
 import torch
@@ -9,6 +10,7 @@ import numpy as np
 import random
 import time
 import pickle
+from feature_extractor import feat_extract2
 # The purpose of this script is to test that the code of the ther 
 # scripts was written correctly. 
 
@@ -94,13 +96,13 @@ def steps_in_random_run():
 
     steps = []
 
-    for x in range(20):
+    for x in range(100):
         counter = 1
-        obs = trainer.step(0,init=True)
+        obs = env.reset()
         
         while True:
 
-            obs,rew,done = trainer.step(trainer.env.action_space.sample())
+            obs,rew,done,_ = env.step(env.action_space.sample())
             counter +=1
 
             if done:
@@ -109,7 +111,7 @@ def steps_in_random_run():
     
     mean = np.mean(np.array(steps))
     print('Mean number of steps:',mean)
-    print('Mean N of frames:',mean*trainer.skip)
+    
 
 
 
@@ -118,13 +120,25 @@ def watch_model(input_model):
     model = input_model
 
     obs = env.reset()
+    env.render()
 
     while True:
 
-        env.render()
-        act = torch.argmax(model(obs))
+        #act = env.action_space.sample()#
+        obs = feat_extract2(obs).to('cuda:0')
+        print(obs)
+        q_vals = model(obs)
+        act = torch.argmax(q_vals)
+        print(q_vals)
         obs,rew,done,_ = env.step(act)
-        time.sleep(0.5)
+        env.render()
+        time.sleep(1)
+
+        
+
+        if done:
+            print('YABADABADOOOOOOOOOOOOOOOOOOOOOOOOOOOO')
+            obs = env.reset()
 
 
 
@@ -168,6 +182,11 @@ def recap(losses, returns, q_vals, ep_len, tag, reps):
 
     
 
+if __name__ == '__main__':
+
+    #watch_model(torch.load('TrainedModels/Hparam_paper_9.pt'))
+    #play(env)
+    steps_in_random_run()
 
 
 

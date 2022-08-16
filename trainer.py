@@ -4,7 +4,7 @@ import torch.optim
 from replay_buffer import Observation
 import random
 import copy
-from feature_extractor import feat_extract
+from feature_extractor import feat_extract2
 import sys
 from DQN import DeepQNet
 
@@ -27,7 +27,7 @@ class Trainer:
             eps_step: steps
 
     """ 
-    def __init__(self,device,env,buffer,skip,epochs,updates_per_epoch,lr,batch_size,eps_initial,eps_final,eps_step) -> None:
+    def __init__(self,device,env,buffer,epochs,updates_per_epoch,lr,batch_size,eps_initial,eps_final,eps_step) -> None:
         
         # Load external hyperparams
         self.env = env
@@ -37,7 +37,6 @@ class Trainer:
         self.lr = lr
         self.batch_size = batch_size
         self.buffer = buffer
-        self.skip = skip
         self.epochs = epochs
         self.updates_per_epoch = updates_per_epoch
         self.eps_initial = eps_initial
@@ -48,9 +47,8 @@ class Trainer:
         # Process model using GPU
         self.model.to(device)
 
-        # Obs tensor template
-        self.obs_template = torch.empty(4)
-        
+        torch.set_default_tensor_type('torch.FloatTensor')
+
         # Create optimizer
         self.optimizer = torch.optim.Adam(self.model.parameters(),lr=self.lr)
         self.loss_func = torch.nn.MSELoss()
@@ -64,36 +62,39 @@ class Trainer:
 
     def custom_reward(self, obs, rew):
 
-        x_rew = self.gaussian(obs[0]-obs[2])/10
-        y_rew = (1-(1/72)*obs[1])/10
+        #x_rew =-1 + self.gaussian(obs[0]-obs[2])/10
+        #y_rew = (1-(2/65)*obs[1])/10
 
-        return rew + x_rew + y_rew
+        #reward =  rew + x_rew  #+ y_rew
+
+        if int(rew) != 0 :
+            print('broken_brick')
+
+        reward_tensor = torch.tensor([[rew]]).to(self.device)
+
+        return reward_tensor
 
     def step(self,act, init= False):
 
         # Initialize Episode
 
         if init:
-            obs = copy.copy(self.obs_template)
-            obs_s = self.env.reset()
-            for x in range(self.skip):
-                obs[0,x,:,:] = torch.from_numpy(feat_extract(obs_s))
+            
+            obs = self.env.reset()
+            obs = feat_extract2(obs)
             
             return obs.to(self.device)
 
         # Steps that are not initial
 
         if not init:    
-            obs = copy.copy(self.obs_template)
-            rew = []
+           
             
-            for x in range(self.skip):
-                obs_s,rew_s,done,_ = self.env.step(act)
-                obs[0,x,:,:] = torch.from_numpy(feat_extract(obs_s))
-                rew.append(rew_s)
+            obs,rew,done,_ = self.env.step(act)
+            obs = feat_extract2(obs)
+            rew = self.custom_reward(obs,rew)
                 
-            return obs.to(self.device), sum(rew), done
-
+            return obs.to(self.device), rew, done
 
 
     def populate(self):
@@ -102,10 +103,12 @@ class Trainer:
         obs0 = self.step(0,init=True)
 
         while True:
+            
             # Choose Random action
             act = random.randint(0,3)
             # Take action
             obs1,rew,done = self.step(act)
+            
             # Decide if you store it or not for added randomness and variabilioty of experiencws
             if random.randint(0,1):
 
@@ -125,7 +128,7 @@ class Trainer:
         # Lists containing the observations
         states,actions,rewards,dones,next_states = self.buffer.sample(self.batch_size)
         # Array to store losses
-        losses = torch.empty(self.batch_size)
+        losses = torch.empty(self.batch_size).to(self.device)
 
         for x in range(self.batch_size):
             #calculate target and predicted
@@ -179,7 +182,7 @@ class Trainer:
         obs0 = self.step(0,init=True)
 
         while True:
-
+        
             # Select an action with greedy policy
             act, q_val = self.pick_action(obs0)
             #Env Step

@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 from testing_tools import recap
 import numpy as np
 import pickle
+import warnings
+
+warnings.filterwarnings('ignore')
 
 
 
@@ -14,10 +17,10 @@ env = gym.make('Breakout-v4')
 
 
 # Non-variable H-Params
-epochs = 30
-updates_per_epoch = 5e4
+epochs = 100
+updates_per_epoch = 1000
 runs_per_hp_set = 1 # To compute statistics
-buffer_size = 1000
+buffer_size = 10000
 epsilon_initial = 1
 epsilon_final = 0.1
 
@@ -26,7 +29,7 @@ epsilon_final = 0.1
 
 #Skips
 skip_min = 1
-skip_max = 4
+skip_max = 1
 # Learning rates
 lr_min = 1e-4
 lr_max = 1e-2
@@ -95,14 +98,14 @@ for x in range (iterations):
         trainer = Trainer(  device = dev,
                             env=env,
                             buffer = buffer,
-                            skip = 2,#int(skip[x]),
+                            #skip = 2,#int(skip[x]),
                             epochs = epochs,
                             updates_per_epoch = updates_per_epoch,
-                            lr = 1e-4,#lr[x],
-                            batch_size = 32,#int(bs[x]),
+                            lr = 1e-3,#lr[x],
+                            batch_size = 25,#int(bs[x]),
                             eps_initial=epsilon_initial,
                             eps_final = epsilon_final,
-                            eps_step=1e-8)#gps[x]   )
+                            eps_step=1e-6)#gps[x]   )
 
         name_of_run = 'Hparam_paper'
         trainer.populate()
