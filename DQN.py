@@ -11,14 +11,18 @@ class DeepQNet(nn.Module):
     # Output: Values for actions [4]
 
 
-    def __init__(self,input_shape,output_shape) -> None:
+    def __init__(self,output_shape) -> None:
         super().__init__()
 
         # Create the layers
-        self.conv1 = nn.Conv2d(in_channels=input_shape,out_channels=16,kernel_size=8,stride=4)
-        self.conv2 = nn.Conv2d(in_channels=16,out_channels=32,kernel_size=4,stride=2)
-        self.fc = nn.Linear(2592,256)
-        self.output = nn.Linear(256,output_shape)
+
+        self.conv1 = nn.Conv2d(in_channels=4,out_channels=32,kernel_size=8,stride=4)
+        self.conv2 = nn.Conv2d(in_channels=32,out_channels=64,kernel_size=4,stride=2)
+        self.conv3 = nn.Conv2d(in_channels=64,out_channels=64,kernel_size=3,stride=1)
+        self.fully_connected = nn.Linear(3136,512)
+        self.output = nn.Linear(512,output_shape)
+
+    
         
 
     def forward(self, x):
@@ -28,12 +32,14 @@ class DeepQNet(nn.Module):
         x = F.relu(x)
         x = self.conv2(x)
         x = F.relu(x)
+        x = self.conv3(x)
+        x = F.relu(x)
         
         # Flatten
         x = torch.flatten(x)
 
         #Linear layers and output
-        x = self.fc(x)
+        x = self.fully_connected(x)
         x = F.relu(x)
         x = self.output(x)
 

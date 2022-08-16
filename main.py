@@ -7,11 +7,13 @@ from testing_tools import recap
 import numpy as np
 import pickle
 
+# Deepmind
+from stable_baselines.common.atari_wrappers import make_atari, wrap_deepmind
 
 
 #Define Environment
-env = gym.make('Breakout-v4')
-
+env = make_atari('BreakoutNoFrameskip-v4')
+env = wrap_deepmind(env, frame_stack= True, scale=True)
 
 # Non-variable H-Params
 epochs = 50
@@ -95,7 +97,9 @@ for x in range (iterations):
         trainer = Trainer(  device = dev,
                             env=env,
                             buffer = buffer,
-                            skip = 4,#int(skip[x]),
+                            discount = 0.99,#int(skip[x]),
+                            update_target= 10000,
+                            gradient_update=4,
                             epochs = epochs,
                             updates_per_epoch = updates_per_epoch,
                             lr = 1e-4,#lr[x],
