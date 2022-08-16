@@ -16,7 +16,7 @@ def feat_extract(obs):
     
     # Return, rescaled cropped grayscale observation
     return obs
-
+# Change
 
 # Check what ur function is doing. If you mand to mod for other games or smth
 if __name__ =='__main__':
