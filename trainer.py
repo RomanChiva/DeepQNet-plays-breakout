@@ -49,6 +49,7 @@ class Trainer:
         self.device = device
         # Process model using GPU
         self.model.to(device)
+        self.target.to(device)
 
         # Obs tensor template
         #self.obs_template = torch.empty((1,self.skip,86,86))
@@ -87,26 +88,33 @@ class Trainer:
     def populate(self):
         
         # Initialize buffer with random obervations
-        obs0 = self.env.reset()
+        obs0 = torch.from_numpy(np.array(self.env.reset())).to(self.device)
+        obs0 = torch.unsqueeze(obs0,0).permute(0,3,1,2)
 
         while True:
             # Choose Random action
             act = random.randint(0,3)
             # Take action
             obs1,rew,done,_ = self.env.step(act)
+
+            # Shape and convert to tensor
+            obs1 = torch.from_numpy(np.array(obs1)).to(self.device)
+            obs1 = torch.unsqueeze(obs1,0).permute(0,3,1,2)
             # Decide if you store it or not for added randomness and variabilioty of experiencws
             if random.randint(0,1):
 
-                observation = Observation(torch.from_numpy(obs0).to(self.device),act,rew,done,torch.from_numpy(obs1).to(self.device))
+                observation = Observation(obs0,act,rew,done,obs1)
                 self.buffer.append(observation)
             # Check if the buffer is ready
-            if self.buffer.ready():
+            if self.buffer.len() > 500:
+                print('Buffer Ready, Start Training')
                 break
             # Copy obs1 into obs0 for use in the next Observation
             obs0 = copy.copy(obs1)
             # Check if environment needs to be reset
             if done:
-                obs0 = self.env.reset()
+                obs0 = torch.from_numpy(np.array(self.env.reset())).to(self.device)
+                obs0 = torch.unsqueeze(obs0,0).permute(0,3,1,2)
 
 
     def evaluate_batch_loss(self):
@@ -124,7 +132,7 @@ class Trainer:
             losses[x] = loss
 
         # Return mean loss of samples
-        return losses
+        return torch.mean(losses)
 
     def pick_action(self,obs):
 
@@ -166,7 +174,8 @@ class Trainer:
 
         # Initialize environment
         obs0 = self.env.reset()
-        obs0 = torch.from_numpy(obs0).to(self.device)
+        obs0 = obs0 = torch.from_numpy(np.array(self.env.reset())).to(self.device)
+        obs0 = torch.unsqueeze(obs0,0).permute(0,3,1,2)
 
         while True:
 
@@ -177,7 +186,8 @@ class Trainer:
             act, q_val = self.pick_action(obs0)
             #Env Step
             obs1, rew, done,_ = self.env.step(act)
-            obs1 = torch.from_numpy(obs1).to(self.device)
+            obs1 = torch.from_numpy(np.array(obs1)).to(self.device)
+            obs1 = torch.unsqueeze(obs1,0).permute(0,3,1,2)
             # Record what you just saw
             self.buffer.append(Observation(obs0,act,rew,done,obs1))
             # Swap observations
@@ -204,11 +214,12 @@ class Trainer:
             # If done, reset the environment
             if done:
                 obs0 = self.env.reset()
-                obs0 = torch.from_numpy(obs0).to(self.device)
+                obs0 = torch.from_numpy(np.array(self.env.reset())).to(self.device)
+                obs0 = torch.unsqueeze(obs0,0).permute(0,3,1,2)
                 episode_count +=1
 
             # End Epoch, Calculate Statistics and Give Feedback
-            if frame_count % self.updates_per_epoch*self.gradient_update == 0 and done:
+            if frame_count > self.updates_per_epoch*self.gradient_update  and done:
                 break
 
 

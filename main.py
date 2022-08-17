@@ -16,10 +16,10 @@ env = make_atari('BreakoutNoFrameskip-v4')
 env = wrap_deepmind(env, frame_stack= True, scale=True)
 
 # Non-variable H-Params
-epochs = 50
-updates_per_epoch = 5e4
+epochs = 100
+updates_per_epoch = 25000
 runs_per_hp_set = 1 # To compute statistics
-buffer_size = 10000
+buffer_size = 20000
 epsilon_initial = 1
 epsilon_final = 0.1
  
@@ -78,8 +78,8 @@ for x in range (iterations):
     print('-----STARTING ITERATION-{a}---'.format(a=x+1))
     print('==============================')
 
-    name_of_run = 'RS{n}_sk{a}_lr{b}_bs{c}_gps{d}'.format(n = iterations,a = skip[x], b = lr[x],c=bs[x], d = gps[x])
-    print(name_of_run)
+    #name_of_run = 'RS{n}_sk{a}_lr{b}_bs{c}_gps{d}'.format(n = iterations,a = skip[x], b = lr[x],c=bs[x], d = gps[x])
+    #print(name_of_run)
     
 
     losses = []
@@ -102,13 +102,13 @@ for x in range (iterations):
                             gradient_update=4,
                             epochs = epochs,
                             updates_per_epoch = updates_per_epoch,
-                            lr = 1e-4,#lr[x],
+                            lr = 0.00025,#lr[x],
                             batch_size = 32,#int(bs[x]),
                             eps_initial=epsilon_initial,
                             eps_final = epsilon_final,
-                            eps_step=0.9e-6)#gps[x]   )
+                            eps_step=0.89e-6)#gps[x]   )
 
-        name_of_run = 'Hparam_paper'
+        name_of_run = 'Hparams_from_KERAS_website'
         trainer.populate()
         model, loss, ret, q_val, ep_len = trainer.train(name_of_run)
         path = 'TrainedModels/' + name_of_run + '_{}'.format(x+1) +'.pt'
