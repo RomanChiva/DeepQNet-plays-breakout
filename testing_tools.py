@@ -18,7 +18,7 @@ import pickle
 
 
 # Initialize testing model
-env = gym.make('Breakout-v4')
+#env = gym.make('Breakout-v4')
 #print(env.action_space.n)
 #model = DeepQNet(86,4,27482)
 # Use smaler buffer, for testing purposes being sped up
