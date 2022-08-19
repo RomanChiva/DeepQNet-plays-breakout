@@ -9,7 +9,7 @@ import pickle
 
 # Deepmind
 from stable_baselines.common.atari_wrappers import make_atari, wrap_deepmind
-
+torch.cuda.max_memory_reserved()
 
 #Define Environment
 env = make_atari('BreakoutNoFrameskip-v4')
