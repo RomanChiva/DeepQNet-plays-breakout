@@ -102,7 +102,7 @@ for x in range (iterations):
                             gradient_update=20,
                             epochs = epochs,
                             updates_per_epoch = updates_per_epoch,
-                            lr = 0.0002,#lr[x],
+                            lr = 0.00002,#lr[x],
                             batch_size = 32,#int(bs[x]),
                             eps_initial=epsilon_initial,
                             eps_final = epsilon_final,

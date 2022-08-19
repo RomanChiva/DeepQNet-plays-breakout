@@ -36,7 +36,7 @@ class DeepQNet(nn.Module):
         x = F.relu(x)
         
         # Flatten
-        x = torch.flatten(x)
+        x = torch.flatten(x, start_dim=1) # Flatten the samples but not the batch!!!
 
         #Linear layers and output
         x = self.fully_connected(x)

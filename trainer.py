@@ -56,7 +56,7 @@ class Trainer:
         
         # Create optimizer
         self.optimizer = torch.optim.Adam(self.model.parameters(),lr=self.lr)
-        self.loss_func = torch.nn.HuberLoss()
+        self.loss_func = torch.nn.HuberLoss(reduction='mean')
 
     # def step(self,act, init= False):
 
@@ -89,7 +89,7 @@ class Trainer:
         
         # Initialize buffer with random obervations
         obs0 = torch.from_numpy(np.array(self.env.reset()))
-        obs0 = torch.unsqueeze(obs0,0).permute(0,3,1,2)
+        obs0 = obs0.permute(2,0,1)
 
         while True:
             # Choose Random action
@@ -99,14 +99,14 @@ class Trainer:
 
             # Shape and convert to tensor
             obs1 = torch.from_numpy(np.array(obs1))
-            obs1 = torch.unsqueeze(obs1,0).permute(0,3,1,2)
+            obs1 = obs1.permute(2,0,1)
             # Decide if you store it or not for added randomness and variabilioty of experiencws
             if random.randint(0,1):
 
                 observation = Observation(obs0,act,rew,done,obs1)
                 self.buffer.append(observation)
             # Check if the buffer is ready
-            if self.buffer.len() > 500:
+            if self.buffer.len() > 100:
                 print('Buffer Ready, Start Training')
                 break
             # Copy obs1 into obs0 for use in the next Observation
@@ -114,34 +114,39 @@ class Trainer:
             # Check if environment needs to be reset
             if done:
                 obs0 = torch.from_numpy(np.array(self.env.reset()))
-                obs0 = torch.unsqueeze(obs0,0).permute(0,3,1,2)
+                obs0 = obs0.permute(2,0,1)
 
 
     def evaluate_batch_loss(self):
 
         # Lists containing the observations
         states,actions,rewards,dones,next_states = self.buffer.sample(self.batch_size)
-        # Array to store losses
-        losses = torch.empty(self.batch_size)
-
-        for x in range(self.batch_size):
-            #calculate target and predicted
-            
-            state = states[x].to(self.device)
-            next_state = next_states[x].to(self.device)
-
-            predicted = self.model.forward(state)[actions[x]]
-            target = rewards[x] + self.discount*max(self.target.forward(next_state))
-            loss = self.loss_func(predicted,target)
-            losses[x] = loss
+        
+        # Prep the batch
+        states = torch.stack(states).to(self.device)
+        next_states = torch.stack(next_states).to(self.device)
+        actions = torch.tensor(actions).to(self.device)
+        actions = actions.view(self.batch_size,1)
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        
+        # Predictions given the initial state
+        predicted = self.model.forward(states).gather(1,actions)[:,0]
+        
+        # Targets
+        target_net_q = self.discount*self.target.forward(next_states).max(1)[0].detach()
+        targets = rewards + target_net_q
+        
+        
+        loss = self.loss_func(predicted,targets)  
 
         # Return mean loss of samples
-        return torch.mean(losses)
+        return loss
 
     def pick_action(self,obs):
 
         # Calculate Q values
-        
+        obs = torch.unsqueeze(obs,0)
+
         q_vals = self.model.forward(obs.to(self.device))
         obs.detach().cpu()
 
@@ -181,7 +186,7 @@ class Trainer:
         # Initialize environment
         obs0 = self.env.reset()
         obs0 = obs0 = torch.from_numpy(np.array(self.env.reset()))
-        obs0 = torch.unsqueeze(obs0,0).permute(0,3,1,2)
+        obs0 = obs0.permute(2,0,1)
 
         while True:
 
@@ -193,7 +198,7 @@ class Trainer:
             #Env Step
             obs1, rew, done,_ = self.env.step(act)
             obs1 = torch.from_numpy(np.array(obs1))
-            obs1 = torch.unsqueeze(obs1,0).permute(0,3,1,2)
+            obs1 = obs1.permute(2,0,1)
             # Record what you just saw
             self.buffer.append(Observation(obs0,act,rew,done,obs1))
             # Swap observations
@@ -221,7 +226,7 @@ class Trainer:
             if done:
                 obs0 = self.env.reset()
                 obs0 = torch.from_numpy(np.array(self.env.reset()))
-                obs0 = torch.unsqueeze(obs0,0).permute(0,3,1,2)
+                obs0 = obs0.permute(2,0,1)
                 episode_count +=1
 
             # End Epoch, Calculate Statistics and Give Feedback

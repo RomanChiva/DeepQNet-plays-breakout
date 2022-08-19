@@ -128,7 +128,10 @@ def watch_model(input_model):
         obs = torch.from_numpy(np.array(env.reset())).to('cuda:0')
         obs = torch.unsqueeze(obs,0).permute(0,3,1,2)
         env.render()
-        act = torch.argmax(model(obs))
+        q_vals = model(obs)
+        print(q_vals)
+        act = torch.argmax(q_vals)
+        print(int(act))
         obs,rew,done,_ = env.step(act)
         time.sleep(0.5)
 
@@ -175,7 +178,7 @@ def recap(losses, returns, q_vals, ep_len, tag, reps):
     
 if __name__ == '__main__':
     
-    model = torch.load('TrainedModels/Hparams_from_KERAS_REDUCE_LR_more_Exploration_66.pt')
+    model = torch.load('TrainedModels/Hparams_from_KERAS_REDUCE_LR_more_Exploration_0.pt')
     watch_model(model)
 
 
