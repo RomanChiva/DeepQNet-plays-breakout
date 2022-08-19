@@ -17,7 +17,7 @@ env = wrap_deepmind(env, frame_stack= True, scale=True)
 
 # Non-variable H-Params
 epochs = 100
-updates_per_epoch = 25000
+updates_per_epoch = 5000
 runs_per_hp_set = 1 # To compute statistics
 buffer_size = 20000
 epsilon_initial = 1
@@ -99,16 +99,16 @@ for x in range (iterations):
                             buffer = buffer,
                             discount = 0.99,#int(skip[x]),
                             update_target= 10000,
-                            gradient_update=4,
+                            gradient_update=20,
                             epochs = epochs,
                             updates_per_epoch = updates_per_epoch,
-                            lr = 0.00025,#lr[x],
+                            lr = 0.0002,#lr[x],
                             batch_size = 32,#int(bs[x]),
                             eps_initial=epsilon_initial,
                             eps_final = epsilon_final,
-                            eps_step=0.89e-6)#gps[x]   )
+                            eps_step=3000000)#gps[x]   )
 
-        name_of_run = 'Hparams_from_KERAS_website'
+        name_of_run = 'Hparams_from_KERAS_REDUCE_LR_more_Exploration'
         trainer.populate()
         model, loss, ret, q_val, ep_len = trainer.train(name_of_run)
         path = 'TrainedModels/' + name_of_run + '_{}'.format(x+1) +'.pt'

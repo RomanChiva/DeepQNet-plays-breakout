@@ -17,8 +17,13 @@ import pickle
 # but rather perform actions on the model.
 
 
-# Initialize testing model
-#env = gym.make('Breakout-v4')
+# Deepmind
+from stable_baselines.common.atari_wrappers import make_atari, wrap_deepmind
+
+
+#Define Environment
+env = make_atari('BreakoutNoFrameskip-v4')
+env = wrap_deepmind(env, frame_stack= True, scale=True)
 #print(env.action_space.n)
 #model = DeepQNet(86,4,27482)
 # Use smaler buffer, for testing purposes being sped up
@@ -120,7 +125,8 @@ def watch_model(input_model):
     obs = env.reset()
 
     while True:
-
+        obs = torch.from_numpy(np.array(env.reset())).to('cuda:0')
+        obs = torch.unsqueeze(obs,0).permute(0,3,1,2)
         env.render()
         act = torch.argmax(model(obs))
         obs,rew,done,_ = env.step(act)
@@ -167,7 +173,10 @@ def recap(losses, returns, q_vals, ep_len, tag, reps):
 
 
     
-
+if __name__ == '__main__':
+    
+    model = torch.load('TrainedModels/Hparams_from_KERAS_REDUCE_LR_more_Exploration_66.pt')
+    watch_model(model)
 
 
 

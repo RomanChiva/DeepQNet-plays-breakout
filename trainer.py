@@ -44,7 +44,7 @@ class Trainer:
         self.updates_per_epoch = updates_per_epoch
         self.eps_initial = eps_initial
         self.eps_final = eps_final
-        self.eps_step = eps_step
+        self.eps_step = (eps_initial-eps_final)/eps_step
 
         self.device = device
         # Process model using GPU
