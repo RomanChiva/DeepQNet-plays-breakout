@@ -19,7 +19,7 @@ env = wrap_deepmind(env, frame_stack= True, scale=True)
 epochs = 100
 updates_per_epoch = 5000
 runs_per_hp_set = 1 # To compute statistics
-buffer_size = 20000
+buffer_size = 100000
 epsilon_initial = 1
 epsilon_final = 0.1
  
