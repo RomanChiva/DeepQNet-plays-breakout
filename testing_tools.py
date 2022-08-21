@@ -160,9 +160,6 @@ def process_obs(obs,model):
 
     obs = torch.from_numpy(np.array(obs)).to('cuda:0')
     obs = obs.permute(0,3,1,2)
-    plt.title("agent observation (4 frames)")
-    plt.imshow(obs.cpu()[0,1,:,:])
-    plt.show()
     q = model(obs.type(torch.float32))
     act = torch.tensor([torch.argmax(q)])
     print(act)
@@ -186,7 +183,7 @@ def watch_model(input_model):
 if __name__ == '__main__':
 
     
-    model = torch.load('TrainedModels/Hparams_from_KERAS_REDUCE_LR_more_Exploration_1.pt')
+    model = torch.load('TrainedModels/Hparams_from_KERAS_REDUCE_LR_more_Exploration_0.pt')
     untrained_net = DeepQNet(4).to('cuda:0')
     watch_model(model)
 

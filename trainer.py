@@ -94,7 +94,7 @@ class Trainer:
 
         while True:
             # Choose Random action
-            act = random.randint(0,3)
+            act = self.env.action_space.sample()
             # Take action
             obs1,rew,done,_ = self.env.step([act])
 
