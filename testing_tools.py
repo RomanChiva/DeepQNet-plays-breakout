@@ -1,3 +1,4 @@
+from turtle import screensize
 import unittest
 from trainer import Trainer
 import gym
@@ -17,14 +18,15 @@ import pickle
 # but rather perform actions on the model.
 
 
-# Deepmind
-from stable_baselines.common.atari_wrappers import make_atari, wrap_deepmind
+from stable_baselines3 import A2C
+from stable_baselines3.common.env_util import make_atari_env
+from stable_baselines3.common.vec_env import VecFrameStack
+
+env = make_atari_env('BreakoutNoFrameskip-v4')
+env = VecFrameStack(env, n_stack=4)
 
 
-#Define Environment
-env = make_atari('BreakoutNoFrameskip-v4')
-env = wrap_deepmind(env, frame_stack= True, scale=True)
-#print(env.action_space.n)
+
 #model = DeepQNet(86,4,27482)
 # Use smaler buffer, for testing purposes being sped up
 #buffer = ReplayBuffer(100)
@@ -118,27 +120,6 @@ def steps_in_random_run():
 
 
 
-def watch_model(input_model):
-
-    model = input_model
-
-    obs = env.reset()
-
-    while True:
-        obs = torch.from_numpy(np.array(env.reset())).to('cuda:0')
-        obs = torch.unsqueeze(obs,0).permute(0,3,1,2)
-        env.render()
-        q_vals = model(obs)
-        print(q_vals)
-        act = torch.argmax(q_vals)
-        print(int(act))
-        obs,rew,done,_ = env.step(act)
-        time.sleep(0.5)
-
-
-
-
-
 
 def recap(losses, returns, q_vals, ep_len, tag, reps):
     
@@ -175,10 +156,34 @@ def recap(losses, returns, q_vals, ep_len, tag, reps):
         pickle.dump(array,f)
 
 
+def process_obs(obs,model):
+
+    obs = torch.from_numpy(np.array(obs)).to('cuda:0')
+    obs = obs.permute(0,3,1,2)
+    q = model(obs.type(torch.float32))
+    act = torch.tensor([torch.argmax(q)])
+    return act
+
+def watch_model(input_model):
+
+    
+    obs = env.reset()
+    
+    while True:
+        env.render()
+        act = process_obs(obs, input_model)
+        obs,rew,done,_ = env.step(act)
+        #time.sleep(0.1)
+        if done:
+            env.reset()
+        
+
     
 if __name__ == '__main__':
+
     
-    model = torch.load('TrainedModels/Hparams_from_KERAS_REDUCE_LR_more_Exploration_0.pt')
+    model = torch.load('TrainedModels/Hparams_from_KERAS_REDUCE_LR_more_Exploration_1.pt')
+    untrained_net = DeepQNet(4).to('cuda:0')
     watch_model(model)
 
 

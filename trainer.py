@@ -6,6 +6,7 @@ import random
 import copy
 import sys
 from DQN import DeepQNet
+import gc
 
 class Trainer:
 
@@ -88,8 +89,8 @@ class Trainer:
     def populate(self):
         
         # Initialize buffer with random obervations
-        obs0 = torch.from_numpy(np.array(self.env.reset()))
-        obs0 = obs0.permute(2,0,1)
+        obs0 = self.env.reset()
+        
 
         while True:
             # Choose Random action
@@ -97,9 +98,6 @@ class Trainer:
             # Take action
             obs1,rew,done,_ = self.env.step(act)
 
-            # Shape and convert to tensor
-            obs1 = torch.from_numpy(np.array(obs1))
-            obs1 = obs1.permute(2,0,1)
             # Decide if you store it or not for added randomness and variabilioty of experiencws
             if random.randint(0,1):
 
@@ -113,61 +111,69 @@ class Trainer:
             obs0 = copy.copy(obs1)
             # Check if environment needs to be reset
             if done:
-                obs0 = torch.from_numpy(np.array(self.env.reset()))
-                obs0 = obs0.permute(2,0,1)
+                obs0 = self.env.reset()
+                
 
 
     def evaluate_batch_loss(self):
 
         # Lists containing the observations
-        states,actions,rewards,dones,next_states = self.buffer.sample(self.batch_size)
+        states,actions,rewards,_,next_states = self.buffer.sample(self.batch_size)
         
         # Prep the batch
-        states = torch.stack(states).to(self.device)
-        next_states = torch.stack(next_states).to(self.device)
-        actions = torch.tensor(actions).to(self.device)
-        actions = actions.view(self.batch_size,1)
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        states_tensor = torch.from_numpy(np.array(copy.copy(states))).to(self.device).permute(0,3,1,2)
+        next_states_tensor = torch.from_numpy(np.array(copy.copy(next_states))).to(self.device).permute(0,3,1,2)
+        actions_tensor = torch.tensor(copy.copy(actions)).to(self.device)
+        actions_tensor = actions_tensor.view(self.batch_size,1)
+        rewards_tensor = torch.tensor(copy.copy(rewards), dtype=torch.float32).to(self.device)
         
         # Predictions given the initial state
-        predicted = self.model.forward(states).gather(1,actions)[:,0]
+        predicted = self.model.forward(states_tensor).gather(1,actions_tensor)[:,0]
         
         # Targets
-        target_net_q = self.discount*self.target.forward(next_states).max(1)[0].detach()
-        targets = rewards + target_net_q
+        targets = self.discount*self.target.forward(next_states_tensor).max(1)[0].detach()
+        targets = rewards_tensor + targets
         
         
         loss = self.loss_func(predicted,targets)  
-
+ 
         # Return mean loss of samples
         return loss
 
     def pick_action(self,obs):
 
         # Calculate Q values
-        obs = torch.unsqueeze(obs,0)
-
-        q_vals = self.model.forward(obs.to(self.device))
-        obs.detach().cpu()
-
-        if np.random.random() < self.eps_initial:
-                act = self.env.action_space.sample()
-        else:
-            act = torch.argmax(q_vals)
         
-        if self.eps_initial > self.eps_final:
-            self.eps_initial -= self.eps_step
+        with torch.no_grad():
 
-        return act, torch.mean(q_vals)
+            obs = torch.from_numpy(np.array(obs)).permute(2,0,1)
+            obs = torch.unsqueeze(obs,0)
+
+            q_vals = self.model.forward(obs.to(self.device))
+        
+
+            if np.random.random() < self.eps_initial:
+                    act = self.env.action_space.sample()
+            else:
+                act = torch.argmax(q_vals).item()
+                
+            
+            if self.eps_initial > self.eps_final:
+                self.eps_initial -= self.eps_step
+
+            mean_q = torch.mean(q_vals).item()
+
+        return act, mean_q
+        
     
     def optimize_step(self):
 
         self.optimizer.zero_grad()
-        losses = self.evaluate_batch_loss() 
-        losses.backward()
+        loss = self.evaluate_batch_loss() 
+        loss.backward()
         self.optimizer.step()
-        
-        return torch.mean(losses).detach().cpu()
+
+        return loss.item()
     
     def epoch(self,epoch_number):
 
@@ -185,8 +191,6 @@ class Trainer:
 
         # Initialize environment
         obs0 = self.env.reset()
-        obs0 = obs0 = torch.from_numpy(np.array(self.env.reset()))
-        obs0 = obs0.permute(2,0,1)
 
         while True:
 
@@ -197,16 +201,13 @@ class Trainer:
             act, q_val = self.pick_action(obs0)
             #Env Step
             obs1, rew, done,_ = self.env.step(act)
-            obs1 = torch.from_numpy(np.array(obs1))
-            obs1 = obs1.permute(2,0,1)
             # Record what you just saw
             self.buffer.append(Observation(obs0,act,rew,done,obs1))
             # Swap observations
             obs0 = copy.copy(obs1)
             
-
             # Append to lists
-            q_vals.append(q_val.detach().cpu())
+            q_vals.append(q_val)
             reward += rew
 
 
@@ -215,18 +216,15 @@ class Trainer:
 
                 batch_loss = self.optimize_step()
                 losses.append(batch_loss)
-
             
             # Update Target Network
             if frame_count % self.update_target == 0:
                 self.target.load_state_dict(self.model.state_dict())
-                print('Target Network Updated!')
+                print('Target Network Updated! , Eps:{}'.format(self.eps_initial))
 
             # If done, reset the environment
             if done:
                 obs0 = self.env.reset()
-                obs0 = torch.from_numpy(np.array(self.env.reset()))
-                obs0 = obs0.permute(2,0,1)
                 episode_count +=1
 
             # End Epoch, Calculate Statistics and Give Feedback
