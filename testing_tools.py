@@ -18,7 +18,7 @@ import pickle
 # but rather perform actions on the model.
 
 
-from stable_baselines3 import A2C
+
 from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
@@ -160,8 +160,12 @@ def process_obs(obs,model):
 
     obs = torch.from_numpy(np.array(obs)).to('cuda:0')
     obs = obs.permute(0,3,1,2)
+    plt.title("agent observation (4 frames)")
+    plt.imshow(obs.cpu()[0,1,:,:])
+    plt.show()
     q = model(obs.type(torch.float32))
     act = torch.tensor([torch.argmax(q)])
+    print(act)
     return act
 
 def watch_model(input_model):

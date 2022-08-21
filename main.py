@@ -8,12 +8,13 @@ import numpy as np
 import pickle
 
 # Deepmind
-from stable_baselines.common.atari_wrappers import make_atari, wrap_deepmind
-torch.cuda.max_memory_reserved()
+from stable_baselines3.common.env_util import make_atari_env
+from stable_baselines3.common.vec_env import VecFrameStack
 
-#Define Environment
-env = make_atari('BreakoutNoFrameskip-v4')
-env = wrap_deepmind(env, frame_stack= True, scale=True)
+env = make_atari_env('BreakoutNoFrameskip-v4')
+env = VecFrameStack(env, n_stack=4)
+
+
 
 # Non-variable H-Params
 epochs = 100

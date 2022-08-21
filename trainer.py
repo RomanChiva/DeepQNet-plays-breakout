@@ -96,7 +96,7 @@ class Trainer:
             # Choose Random action
             act = random.randint(0,3)
             # Take action
-            obs1,rew,done,_ = self.env.step(act)
+            obs1,rew,done,_ = self.env.step([act])
 
             # Decide if you store it or not for added randomness and variabilioty of experiencws
             if random.randint(0,1):
@@ -119,24 +119,26 @@ class Trainer:
 
         # Lists containing the observations
         states,actions,rewards,_,next_states = self.buffer.sample(self.batch_size)
-        
+    
         # Prep the batch
-        states_tensor = torch.from_numpy(np.array(copy.copy(states))).to(self.device).permute(0,3,1,2)
-        next_states_tensor = torch.from_numpy(np.array(copy.copy(next_states))).to(self.device).permute(0,3,1,2)
+        states_tensor = torch.from_numpy(np.array(copy.copy(states))).squeeze().to(self.device).permute(0,3,1,2).type(torch.float32)
+        next_states_tensor = torch.from_numpy(np.array(copy.copy(next_states))).squeeze().to(self.device).permute(0,3,1,2).type(torch.float32)
         actions_tensor = torch.tensor(copy.copy(actions)).to(self.device)
         actions_tensor = actions_tensor.view(self.batch_size,1)
-        rewards_tensor = torch.tensor(copy.copy(rewards), dtype=torch.float32).to(self.device)
+        rewards_tensor = torch.from_numpy(np.array(copy.copy(rewards))).to(self.device).squeeze()
         
         # Predictions given the initial state
         predicted = self.model.forward(states_tensor).gather(1,actions_tensor)[:,0]
         
         # Targets
         targets = self.discount*self.target.forward(next_states_tensor).max(1)[0].detach()
+        
         targets = rewards_tensor + targets
         
         
         loss = self.loss_func(predicted,targets)  
- 
+
+        
         # Return mean loss of samples
         return loss
 
@@ -146,8 +148,8 @@ class Trainer:
         
         with torch.no_grad():
 
-            obs = torch.from_numpy(np.array(obs)).permute(2,0,1)
-            obs = torch.unsqueeze(obs,0)
+            obs = torch.from_numpy(np.array(obs)).permute(0,3,1,2).type(torch.float32)
+            
 
             q_vals = self.model.forward(obs.to(self.device))
         
@@ -200,7 +202,7 @@ class Trainer:
             # Select an action with greedy policy
             act, q_val = self.pick_action(obs0)
             #Env Step
-            obs1, rew, done,_ = self.env.step(act)
+            obs1, rew, done,_ = self.env.step([act])
             # Record what you just saw
             self.buffer.append(Observation(obs0,act,rew,done,obs1))
             # Swap observations
