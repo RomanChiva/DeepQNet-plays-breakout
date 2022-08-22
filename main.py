@@ -1,3 +1,5 @@
+from ctypes.wintypes import tagRECT
+from psutil import disk_io_counters
 from trainer import Trainer
 import gym
 import torch
@@ -7,61 +9,31 @@ from testing_tools import recap
 import numpy as np
 import pickle
 
-# Deepmind
+# Stable Baselines Environment
 from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
+# Construct Environment
 env = make_atari_env('BreakoutNoFrameskip-v4')
 env = VecFrameStack(env, n_stack=4)
 
 
 
-# Non-variable H-Params
+# Decalre Hyperparameters
 epochs = 100
 updates_per_epoch = 5000
 runs_per_hp_set = 1 # To compute statistics
-buffer_size = 10000
+buffer_size = 100000
 epsilon_initial = 1
-epsilon_final = 0.1
- 
-
-# Define search space
-
-#Skips
-skip_min = 1
-skip_max = 4
-# Learning rates
-lr_min = 1e-4
-lr_max = 1e-2
-# Batch_size
-bs_min = 50
-bs_max = 300
-# Greedy Policy STeps
-gps_min = 1e-5
-gps_max = 5e-5
+epsilon_final = 0.02
+discount = 0.99
+update_target = 10000
+update_gradient = 20
+lr = 0.00025
+batch_size = 32
+greedy_steps = 3000000
 
 
-# ============================================
-#             RANDOM SEARCH
-# ============================================
-
-# How many HParam iterations should we evaluate
-iterations = 1
-
-# Build uniform distributions
-skip  = np.random.uniform(low=skip_min, high=skip_max, size = iterations)
-skip = np.round(skip, decimals=0)
-lr  = np.random.uniform(low=lr_min, high=lr_max, size = iterations)
-lr = np.round(lr, decimals=5)
-bs  = np.random.uniform(low=bs_min, high=bs_max, size = iterations)
-bs = np.round(bs, decimals=0)
-gps  = np.random.uniform(low=gps_min, high=gps_max, size = iterations)
-gps = np.round(gps, decimals=5)
-
-# Save Params
-#params = np.array([skip,lr,bs,gps])
-#with open('Hyperparameters/RS{n}_params.pkl'.format(n=iterations), 'wb') as f:
- #   pickle.dump(params,f)
 
 
 # Use GPU for tensors
@@ -72,56 +44,37 @@ else:
 
 
 
-for x in range (iterations):
-
-    # PREP
-    print('==============================')
-    print('-----STARTING ITERATION-{a}---'.format(a=x+1))
-    print('==============================')
-
-    #name_of_run = 'RS{n}_sk{a}_lr{b}_bs{c}_gps{d}'.format(n = iterations,a = skip[x], b = lr[x],c=bs[x], d = gps[x])
-    #print(name_of_run)
+# PREP
+print('==============================')
+print('------STARTING TRAINING-------')
+print('==============================')
     
+# Replay buffer object to store observations
+buffer = ReplayBuffer(buffer_size)
 
-    losses = []
-    returns = []
-    q_vals = []
-    ep_lens = []
+# Trainer tool
+trainer = Trainer(  device = dev,
+                    env=env,
+                    buffer = buffer,
+                    discount = discount,#int(skip[x]),
+                    update_target= update_target,
+                    gradient_update=update_gradient,
+                    epochs = epochs,
+                    updates_per_epoch = updates_per_epoch,
+                    lr = lr,#lr[x],
+                    batch_size = batch_size,#int(bs[x]),
+                    eps_initial=epsilon_initial,
+                    eps_final = epsilon_final,
+                    eps_step=greedy_steps)#gps[x]   )
 
-    
-    for x in range(runs_per_hp_set):
+name_of_run = 'Hparams_3Mil_greedy_lr_0_00025'
+trainer.populate()
+model, loss, ret, q_val, ep_len = trainer.train(name_of_run)
 
-        # Replay buffer object to store observations
-        buffer = ReplayBuffer(buffer_size)
 
-        # Trainer tool
-        trainer = Trainer(  device = dev,
-                            env=env,
-                            buffer = buffer,
-                            discount = 0.99,#int(skip[x]),
-                            update_target= 10000,
-                            gradient_update=20,
-                            epochs = epochs,
-                            updates_per_epoch = updates_per_epoch,
-                            lr = 0.00002,#lr[x],
-                            batch_size = 32,#int(bs[x]),
-                            eps_initial=epsilon_initial,
-                            eps_final = epsilon_final,
-                            eps_step=3000000)#gps[x]   )
 
-        name_of_run = 'Hparams_from_KERAS_REDUCE_LR_more_Exploration'
-        trainer.populate()
-        model, loss, ret, q_val, ep_len = trainer.train(name_of_run)
-        path = 'TrainedModels/' + name_of_run + '_{}'.format(x+1) +'.pt'
-        torch.save(model, path)
-
-        losses.append(loss)
-        returns.append(ret)
-        q_vals.append(q_val)
-        ep_lens.append(ep_len)
-
-    # Save data about the iteration
-    recap(losses,returns,q_vals,ep_lens,name_of_run, runs_per_hp_set)
+# Create Data logs, Plots and store Trining data
+recap(loss,ret,q_val,ep_len,name_of_run)
     
     
 

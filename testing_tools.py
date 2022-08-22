@@ -22,14 +22,16 @@ import pickle
 from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
+
 env = make_atari_env('BreakoutNoFrameskip-v4')
 env = VecFrameStack(env, n_stack=4)
 
 
 
+
 #model = DeepQNet(86,4,27482)
 # Use smaler buffer, for testing purposes being sped up
-#buffer = ReplayBuffer(100)
+#buffer = ReplayBuffer(100)3
 
 # Trainer tool
 #trainer = Trainer(env, 1e-4, 10, buffer,4,10,1500,1,0.2,1e-4)
@@ -121,25 +123,25 @@ def steps_in_random_run():
 
 
 
-def recap(losses, returns, q_vals, ep_len, tag, reps):
+def recap(losses, returns, q_vals, ep_len, tag):
     
     fig, axs = plt.subplots(2,2)
 
-    for x in range(reps):
-        axs[0,0].plot(range(len(losses[x])),losses[x])
+    
+    axs[0,0].plot(range(len(losses)),losses)
     axs[0,0].set_title('Loss')
 
-    for x in range(reps):
-        axs[0,1].plot(range(len(returns[x])),returns[x])
+    
+    axs[0,1].plot(range(len(returns)),returns)
     axs[0,1].set_title('Return')
 
-    for x in range(reps):
-        axs[1,0].plot(range(len(q_vals[x])),q_vals[x])
+    
+    axs[1,0].plot(range(len(q_vals)),q_vals)
     axs[1,0].set_title('Average Max-Q-Value')
     axs[1,0].set_xlabel('Epochs')
 
-    for x in range(reps):
-        axs[1,1].plot(range(len(ep_len[x])),ep_len[x])
+    
+    axs[1,1].plot(range(len(ep_len)),ep_len)
     axs[1,1].set_title('Average Episode Length')
     axs[1,1].set_xlabel('Epochs')
     
@@ -162,28 +164,31 @@ def process_obs(obs,model):
     obs = obs.permute(0,3,1,2)
     q = model(obs.type(torch.float32))
     act = torch.tensor([torch.argmax(q)])
-    print(act)
     return act
 
 def watch_model(input_model):
 
     
     obs = env.reset()
-    
+    reward = 0
+
     while True:
         env.render()
         act = process_obs(obs, input_model)
         obs,rew,done,_ = env.step(act)
-        #time.sleep(0.1)
+        reward += rew
+        time.sleep(0.1)
+        
         if done:
-            env.reset()
+            print(reward)
+            reward = 0
         
 
     
 if __name__ == '__main__':
 
-    
-    model = torch.load('TrainedModels/Hparams_from_KERAS_REDUCE_LR_more_Exploration_0.pt')
+  
+    model = torch.load('TrainedModels/Hparams_3Mil_greedy_lr_0_00025_17.pt')
     untrained_net = DeepQNet(4).to('cuda:0')
     watch_model(model)
 

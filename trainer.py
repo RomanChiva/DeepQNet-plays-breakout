@@ -51,41 +51,12 @@ class Trainer:
         # Process model using GPU
         self.model.to(device)
         self.target.to(device)
-
-        # Obs tensor template
-        #self.obs_template = torch.empty((1,self.skip,86,86))
         
         # Create optimizer
         self.optimizer = torch.optim.Adam(self.model.parameters(),lr=self.lr)
         self.loss_func = torch.nn.HuberLoss(reduction='mean')
 
-    # def step(self,act, init= False):
-
-    #     # Initialize Episode
-
-    #     if init:
-    #         obs = copy.copy(self.obs_template)
-    #         obs_s = self.env.reset()
-    #         for x in range(self.skip):
-    #             obs[0,x,:,:] = torch.from_numpy(feat_extract(obs_s))
-            
-    #         return obs.to(self.device)
-
-    #     # Steps that are not initial
-
-    #     if not init:    
-    #         obs = copy.copy(self.obs_template)
-    #         rew = []
-            
-    #         for x in range(self.skip):
-    #             obs_s,rew_s,done,_ = self.env.step(act)
-    #             obs[0,x,:,:] = torch.from_numpy(feat_extract(obs_s))
-    #             rew.append(rew_s)
-                
-    #         return obs.to(self.device), sum(rew), done
-
-
-
+   
     def populate(self):
         
         # Initialize buffer with random obervations
@@ -104,7 +75,7 @@ class Trainer:
                 observation = Observation(obs0,act,rew,done,obs1)
                 self.buffer.append(observation)
             # Check if the buffer is ready
-            if self.buffer.len() > 100:
+            if self.buffer.len() > 500:
                 print('Buffer Ready, Start Training')
                 break
             # Copy obs1 into obs0 for use in the next Observation
@@ -118,7 +89,7 @@ class Trainer:
     def evaluate_batch_loss(self):
 
         # Lists containing the observations
-        states,actions,rewards,_,next_states = self.buffer.sample(self.batch_size)
+        states,actions,rewards,dones,next_states = self.buffer.sample(self.batch_size)
     
         # Prep the batch
         states_tensor = torch.from_numpy(np.array(copy.copy(states))).squeeze().to(self.device).permute(0,3,1,2).type(torch.float32)
@@ -126,19 +97,21 @@ class Trainer:
         actions_tensor = torch.tensor(copy.copy(actions)).to(self.device)
         actions_tensor = actions_tensor.view(self.batch_size,1)
         rewards_tensor = torch.from_numpy(np.array(copy.copy(rewards))).to(self.device).squeeze()
+        dones_tensor = list(np.array(copy.copy(dones))[:,0])
         
         # Predictions given the initial state
         predicted = self.model.forward(states_tensor).gather(1,actions_tensor)[:,0]
-        
+       
         # Targets
         targets = self.discount*self.target.forward(next_states_tensor).max(1)[0].detach()
-        
         targets = rewards_tensor + targets
+
+        # Make resulting reward for losing the ball Negarive. Makes training much better, droppoing ball extra unappealing
+        targets[dones_tensor] = -1 
         
-        
+        # Calculate Batch Loss
         loss = self.loss_func(predicted,targets)  
 
-        
         # Return mean loss of samples
         return loss
 
@@ -147,22 +120,21 @@ class Trainer:
         # Calculate Q values
         
         with torch.no_grad():
-
-            obs = torch.from_numpy(np.array(obs)).permute(0,3,1,2).type(torch.float32)
             
-
+            # Process Observation
+            obs = torch.from_numpy(np.array(obs)).permute(0,3,1,2).type(torch.float32)
             q_vals = self.model.forward(obs.to(self.device))
-        
 
+            # APply Current Greedy Policy
             if np.random.random() < self.eps_initial:
                     act = self.env.action_space.sample()
             else:
                 act = torch.argmax(q_vals).item()
                 
-            
+            # Take greedy step
             if self.eps_initial > self.eps_final:
                 self.eps_initial -= self.eps_step
-
+            # Calculate Mean Q
             mean_q = torch.mean(q_vals).item()
 
         return act, mean_q
@@ -226,7 +198,7 @@ class Trainer:
 
             # If done, reset the environment
             if done:
-                obs0 = self.env.reset()
+                #obs0 = self.env.reset()
                 episode_count +=1
 
             # End Epoch, Calculate Statistics and Give Feedback
@@ -250,7 +222,8 @@ class Trainer:
 
 
     def train(self, name_of_run):
-
+        
+        # Lists to hold treining Dtaa
         losses = []
         returns = []
         q_vals = []
@@ -264,7 +237,8 @@ class Trainer:
             q_vals.append(average_q_val)
             ep_len.append(average_episode_length)
 
-
+            
+            # Save Snapshot of Model
             path = 'TrainedModels/' + name_of_run + '_{}'.format(x) +'.pt'
             torch.save(self.model, path)
 
