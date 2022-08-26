@@ -5,7 +5,7 @@ from replay_buffer import Observation
 import random
 import copy
 import sys
-from DQN import DeepQNet
+from DQN import DeepQNet, DeepQNet2
 import gc
 
 class Trainer:
@@ -67,7 +67,7 @@ class Trainer:
             # Choose Random action
             act = self.env.action_space.sample()
             # Take action
-            obs1,rew,done,_ = self.env.step([act])
+            obs1,rew,done,_ = self.env.step(act)
 
             # Decide if you store it or not for added randomness and variabilioty of experiencws
             if random.randint(0,1):
@@ -75,7 +75,7 @@ class Trainer:
                 observation = Observation(obs0,act,rew,done,obs1)
                 self.buffer.append(observation)
             # Check if the buffer is ready
-            if self.buffer.len() > 500:
+            if self.buffer.len() > 100:
                 print('Buffer Ready, Start Training')
                 break
             # Copy obs1 into obs0 for use in the next Observation
@@ -92,12 +92,13 @@ class Trainer:
         states,actions,rewards,dones,next_states = self.buffer.sample(self.batch_size)
     
         # Prep the batch
-        states_tensor = torch.from_numpy(np.array(copy.copy(states))).squeeze().to(self.device).permute(0,3,1,2).type(torch.float32)
-        next_states_tensor = torch.from_numpy(np.array(copy.copy(next_states))).squeeze().to(self.device).permute(0,3,1,2).type(torch.float32)
+        states_tensor = torch.from_numpy(np.array(copy.copy(states))).squeeze().to(self.device).type(torch.float32)
+        next_states_tensor = torch.from_numpy(np.array(copy.copy(next_states))).squeeze().to(self.device).type(torch.float32)
         actions_tensor = torch.tensor(copy.copy(actions)).to(self.device)
         actions_tensor = actions_tensor.view(self.batch_size,1)
-        rewards_tensor = torch.from_numpy(np.array(copy.copy(rewards))).to(self.device).squeeze()
-        dones_tensor = list(np.array(copy.copy(dones))[:,0])
+        rewards_tensor = torch.from_numpy(np.array(copy.copy(rewards))).to(self.device).squeeze().type(torch.float32)
+        dones_tensor = list(np.array(copy.copy(dones)))
+        
         
         # Predictions given the initial state
         predicted = self.model.forward(states_tensor).gather(1,actions_tensor)[:,0]
@@ -122,7 +123,8 @@ class Trainer:
         with torch.no_grad():
             
             # Process Observation
-            obs = torch.from_numpy(np.array(obs)).permute(0,3,1,2).type(torch.float32)
+            
+            obs = torch.from_numpy(np.array(obs)).type(torch.float32).unsqueeze(0)
             q_vals = self.model.forward(obs.to(self.device))
 
             # APply Current Greedy Policy
@@ -174,7 +176,7 @@ class Trainer:
             # Select an action with greedy policy
             act, q_val = self.pick_action(obs0)
             #Env Step
-            obs1, rew, done,_ = self.env.step([act])
+            obs1, rew, done,_ = self.env.step(act)
             # Record what you just saw
             self.buffer.append(Observation(obs0,act,rew,done,obs1))
             # Swap observations
@@ -183,6 +185,7 @@ class Trainer:
             # Append to lists
             q_vals.append(q_val)
             reward += rew
+            
 
 
             # Gradient Updates
@@ -198,15 +201,14 @@ class Trainer:
 
             # If done, reset the environment
             if done:
-                #obs0 = self.env.reset()
+                obs0 = self.env.reset()
                 episode_count +=1
 
             # End Epoch, Calculate Statistics and Give Feedback
             if frame_count > self.updates_per_epoch*self.gradient_update  and done:
                 break
 
-
-
+          
         epoch_loss = np.mean(np.array(losses))
         epoch_return = reward/episode_count 
         average_q_val = np.mean(np.array(q_vals))

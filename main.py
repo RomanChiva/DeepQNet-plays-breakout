@@ -8,30 +8,58 @@ import matplotlib.pyplot as plt
 from testing_tools import recap
 import numpy as np
 import pickle
+import highway_env
 
-# Stable Baselines Environment
-from stable_baselines3.common.env_util import make_atari_env
-from stable_baselines3.common.vec_env import VecFrameStack
+# =======================
+#     HIGHWAY DRIVING 
+# =======================
 
 # Construct Environment
-env = make_atari_env('BreakoutNoFrameskip-v4')
-env = VecFrameStack(env, n_stack=4)
+
+env = gym.make('highway-v0')
+
+# CHoose image shape, and set stark contrast betoween green and blu cars
+config = {
+       "observation": {
+           "type": "GrayscaleObservation",
+           "observation_shape": (100, 50),
+           "stack_size": 4,
+           "weights": [0.29, 0.3870, 0.71],  # weights for RGB conversion
+           "scaling": 1.5,
+       },
+       "collision_reward": -1,
+       "duration": 1000,
+       "simulation_frequency": 15,
+       "policy_frequency": 5
+   }
+env.configure(config)
+
+# CHoose Discrete Meta Actions
+
+env.configure({
+    "action": {
+        "type": "DiscreteMetaAction"
+    }
+})
+
+
+
+
 
 
 
 # Decalre Hyperparameters
 epochs = 100
-updates_per_epoch = 5000
-runs_per_hp_set = 1 # To compute statistics
-buffer_size = 100000
+updates_per_epoch = 3000
+buffer_size = 15000
 epsilon_initial = 1
 epsilon_final = 0.02
 discount = 0.99
-update_target = 10000
-update_gradient = 20
-lr = 0.00025
+update_target = 50
+update_gradient = 1
+lr = 3e-4
 batch_size = 32
-greedy_steps = 3000000
+greedy_steps = 10000
 
 
 
@@ -67,7 +95,7 @@ trainer = Trainer(  device = dev,
                     eps_final = epsilon_final,
                     eps_step=greedy_steps)#gps[x]   )
 
-name_of_run = 'Hparams_3Mil_greedy_lr_0_00025'
+name_of_run = 'Traffic_first_try'
 trainer.populate()
 model, loss, ret, q_val, ep_len = trainer.train(name_of_run)
 

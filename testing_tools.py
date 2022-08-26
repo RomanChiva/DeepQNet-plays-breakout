@@ -19,12 +19,12 @@ import pickle
 
 
 
-from stable_baselines3.common.env_util import make_atari_env
-from stable_baselines3.common.vec_env import VecFrameStack
+# from stable_baselines3.common.env_util import make_atari_env
+# from stable_baselines3.common.vec_env import VecFrameStack
 
 
-env = make_atari_env('BreakoutNoFrameskip-v4')
-env = VecFrameStack(env, n_stack=4)
+# env = make_atari_env('BreakoutNoFrameskip-v4')
+# env = VecFrameStack(env, n_stack=4)
 
 
 
@@ -177,7 +177,7 @@ def watch_model(input_model):
         act = process_obs(obs, input_model)
         obs,rew,done,_ = env.step(act)
         reward += rew
-        time.sleep(0.1)
+        time.sleep(0.02)
         
         if done:
             print(reward)
@@ -188,7 +188,7 @@ def watch_model(input_model):
 if __name__ == '__main__':
 
   
-    model = torch.load('TrainedModels/Hparams_3Mil_greedy_lr_0_00025_17.pt')
+    model = torch.load('TrainedModels/Hparams_3Mil_greedy_lr_0_00025_95.pt')
     untrained_net = DeepQNet(4).to('cuda:0')
     watch_model(model)
 
